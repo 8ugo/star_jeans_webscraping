@@ -1,0 +1,576 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "e787df1a",
+   "metadata": {},
+   "source": [
+    "# Star Jeans Analysis Project Using Webscraping"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "da8c5493",
+   "metadata": {},
+   "source": [
+    " - Quetão de negócio\n",
+    " \n",
+    "A empresa Star Jeans! Eduardo e Marcelo são dois brasileiros, amigos e sócios de empreendimento. Depois de vários negócio bem sucedidos, eles estão planejando entrar no mercado de moda dos USA como um modelo de negócio do tipo E-commerce.\n",
+    " \n",
+    "A idéia inicial é entrar no mercado com apenas um produto e para um público específico, no caso o produto seria calças Jeans para o público masculino. O objetivo é manter o custo de operação baixo e escalar a medida que forem conseguindo clientes.\n",
+    "\n",
+    "Porém, mesmo com o produto de entrada e a audiência definidos, os dois sócios não tem experiência nesse mercado de moda e portanto não sabem definir coisas básicas como preço, o tipo de calça e o material para a fabricação de cada peça.\n",
+    "\n",
+    "Assim, os dois sócios contrataram uma consultoria de Ciência de Dados para responder as seguinte perguntas: \n",
+    "\n",
+    "1. Qual o melhor preço de venda para as calças? \n",
+    "2. Quantos tipos de calças e suas cores para o produto inicial? \n",
+    "3. Quais as matérias-prima necessárias para confeccionar as calças?\n",
+    "\n",
+    "As principais concorrentes da empresa Start Jeans são as americadas H&M e Macys."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "c74169f3",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:07:39.293879Z",
+     "start_time": "2023-04-29T16:07:37.911425Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import requests\n",
+    "from bs4 import BeautifulSoup\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "from datetime import datetime\n",
+    "import re\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "4ccae806",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.499335Z",
+     "start_time": "2023-04-29T16:07:39.295723Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "url = 'https://www2.hm.com/en_us/men/products/jeans.html'\n",
+    "\n",
+    "headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}\n",
+    "page = requests.get (url, headers=headers)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "7a179f6a",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.688107Z",
+     "start_time": "2023-04-29T16:10:09.503231Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "soup = BeautifulSoup (page.text, 'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "901dc574",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.706822Z",
+     "start_time": "2023-04-29T16:10:09.691434Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'128'"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "total_item = soup.find_all ('h2', class_='load-more-heading')[0].get('data-total')\n",
+    "total_item"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "04135b36",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.712963Z",
+     "start_time": "2023-04-29T16:10:09.708727Z"
+    }
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "4.0"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "page_number = np.ceil(int(total_item)/36)\n",
+    "page_number"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "ef7fccf8",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.718028Z",
+     "start_time": "2023-04-29T16:10:09.714746Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "url02 = url + '?page-size=' + str(int(page_number*36))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "836ec765",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.728114Z",
+     "start_time": "2023-04-29T16:10:09.719935Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "products = soup.find('ul', class_='products-listing small')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "881fd4df",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.735100Z",
+     "start_time": "2023-04-29T16:10:09.730066Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# product id\n",
+    "product_list = products.find_all ('article', class_='hm-product-item')\n",
+    "product_id = [p.get('data-articlecode') for p in product_list]\n",
+    "\n",
+    "# product category\n",
+    "product_category = [p.get('data-category') for p in product_list]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "bd3d4fb1",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.743780Z",
+     "start_time": "2023-04-29T16:10:09.737499Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# product name\n",
+    "product_list = products.find_all ('a', class_='link')\n",
+    "product_name = [p.get_text() for p in product_list]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "c1e85826",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.750309Z",
+     "start_time": "2023-04-29T16:10:09.745692Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# product price\n",
+    "product_list = products.find_all ('span', class_='price regular')\n",
+    "product_price = [p.get_text() for p in product_list]\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "a0c5e4ae",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:10:09.762751Z",
+     "start_time": "2023-04-29T16:10:09.752281Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "data = pd.DataFrame([product_id, product_category, product_name, product_price]).T\n",
+    "data.columns = ['product_id', 'product_category', 'product_name', 'product_price']\n",
+    "\n",
+    "# Scrapy Datetime \n",
+    "data['scrapy_datetime'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S:')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9e36c2f5",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2022-12-21T17:41:03.708327Z",
+     "start_time": "2022-12-21T17:41:03.704311Z"
+    }
+   },
+   "source": [
+    "## One Product Details"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "5ab1ab07",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:12:40.761859Z",
+     "start_time": "2023-04-29T16:10:09.764500Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "url = 'https://www2.hm.com/en_us/productpage.1024256001.html'\n",
+    "\n",
+    "headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}\n",
+    "page = requests.get (url, headers=headers)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "7b94f977",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:12:40.851464Z",
+     "start_time": "2023-04-29T16:12:40.771040Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "soup = BeautifulSoup(page.text, 'html.parser')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "3d6e5bec",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:12:40.866952Z",
+     "start_time": "2023-04-29T16:12:40.853190Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Color Name \n",
+    "product_list = soup.find_all('a', class_='filter-option miniature')\n",
+    "color_name = [p.get('data-color') for p in product_list]\n",
+    "\n",
+    "# Product Id \n",
+    "product_id = [p.get('data-articlecode') for p in product_list]\n",
+    "\n",
+    "df_color = pd.DataFrame([product_id, color_name]).T\n",
+    "df_color.columns = ['product_id', 'color_name']\n",
+    "\n",
+    "# Generate style id + color id \n",
+    "df_color['style_id'] = df_color['product_id'].apply(lambda x: x[:-3])\n",
+    "df_color['color_id'] = df_color['product_id'].apply(lambda x: x[-3:])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "01b00883",
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2023-04-29T16:12:40.894976Z",
+     "start_time": "2023-04-29T16:12:40.869305Z"
+    },
+    "code_folding": []
+   },
+   "outputs": [],
+   "source": [
+    "# Composition\n",
+    "product_composition_list = soup.find_all('div', class_='details-attributes-list-item')\n",
+    "product_composition = [list(filter(None, p.get_text().split('\\n'))) for p in product_composition_list]\n",
+    "\n",
+    "# Rename Dataframe\n",
+    "df_composition = pd.DataFrame(product_composition).T\n",
+    "df_composition.columns = df_composition.iloc[0]\n",
+    "\n",
+    "# Delete first row \n",
+    "df_composition = df_composition.iloc[1:].fillna(method='ffill')\n",
+    "\n",
+    "# Generate style id + color id \n",
+    "df_composition['style_id'] = df_composition['Art. No.'].apply(lambda x: x[:-3])\n",
+    "df_composition['color_id'] = df_composition['Art. No.'].apply(lambda x: x[-3:])\n",
+    "\n",
+    "# Merge Data color + composition \n",
+    "\n",
+    "data_sku = pd.merge(df_color, df_composition[['style_id', 'Fit', 'Composition']], how='left', on='style_id')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "04d86647",
+   "metadata": {},
+   "source": [
+    "### Multiple Products Details"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "68fe3da6",
+   "metadata": {
+    "ExecuteTime": {
+     "start_time": "2023-04-29T16:07:25.003Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}\n",
+    "\n",
+    "# Empty dataframe\n",
+    "df_details = pd.DataFrame()\n",
+    "\n",
+    "# Unique columns for all products \n",
+    "aux = []\n",
+    "\n",
+    "cols = ['Art. No.', 'Composition', 'Fit', 'Product safety', 'Size'] \n",
+    "df_pattern = pd.DataFrame( columns=cols )\n",
+    "\n",
+    "for i in range(len(data)):\n",
+    "    # API Requests\n",
+    "    url = 'https://www2.hm.com/en_us/productpage.' + data.loc[i, 'product_id'] + '.html'\n",
+    "    page = requests.get (url, headers=headers)\n",
+    "    \n",
+    "    soup = BeautifulSoup(page.text, 'html.parser')\n",
+    "     \n",
+    "    # Color Name \n",
+    "    product_list = soup.find_all('a', class_='filter-option miniature')\n",
+    "    color_name = [p.get('data-color') for p in product_list]\n",
+    "\n",
+    "    # Product Id \n",
+    "    product_id = [p.get('data-articlecode') for p in product_list]\n",
+    "\n",
+    "    df_color = pd.DataFrame([product_id, color_name]).T\n",
+    "    df_color.columns = ['product_id', 'color_name']\n",
+    "\n",
+    "    # Generate style id + color id \n",
+    "    df_color['style_id'] = df_color['product_id'].apply(lambda x: x[:-3])\n",
+    "    df_color['color_id'] = df_color['product_id'].apply(lambda x: x[-3:])\n",
+    "    \n",
+    "    # Composition\n",
+    "    product_composition_list = soup.find_all('div', class_='details-attributes-list-item')\n",
+    "    product_composition = [list(filter(None, p.get_text().split('\\n'))) for p in product_composition_list]\n",
+    "\n",
+    "    # Rename Dataframe\n",
+    "    df_composition = pd.DataFrame(product_composition).T\n",
+    "    df_composition.columns = df_composition.iloc[0]\n",
+    "\n",
+    "    # Delete first row \n",
+    "    df_composition = df_composition.iloc[1:].fillna(method='ffill')\n",
+    "    \n",
+    "    # garantee the same number of columns\n",
+    "    df_composition = pd.concat( [df_pattern, df_composition], axis=0 )\n",
+    "\n",
+    "    # Generate style id + color id \n",
+    "    df_composition['style_id'] = df_composition['Art. No.'].apply(lambda x: x[:-3])\n",
+    "    df_composition['color_id'] = df_composition['Art. No.'].apply(lambda x: x[-3:])\n",
+    "\n",
+    "    # Merge Data color + composition \n",
+    "    data_sku = pd.merge(df_color, df_composition[['style_id', 'Fit', 'Composition', 'Size', 'Product safety']], how='left', on='style_id')\n",
+    "    \n",
+    "    # All details products\n",
+    "    df_details = pd.concat([df_details, data_sku], axis = 0)\n",
+    "    \n",
+    "# Join Showroom data + details\n",
+    "data['style_id'] = data['product_id'].apply( lambda x: x[:-3] )\n",
+    "data['color_id'] = data['product_id'].apply( lambda x: x[-3:] )\n",
+    "    \n",
+    "df = pd.merge( data, df_details[['style_id', 'color_name', 'Fit', 'Composition', 'Size', 'Product safety']],\n",
+    "                    how='left', on='style_id' )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "30f404da",
+   "metadata": {},
+   "source": [
+    "## Data Cleaning"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "f6d3f972",
+   "metadata": {
+    "ExecuteTime": {
+     "start_time": "2023-04-29T16:07:25.004Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "# Removendo os 'NA' da coluna product_id e mudando o tipo para int\n",
+    "df = df.dropna (subset=['product_id'])\n",
+    "df['product_id'] = df['product_id'].astype(int)\n",
+    "\n",
+    "# Colocando no padrão a coluna 'product_name'\n",
+    "df['product_name'] = df['product_name'].apply(lambda x: x.replace(' ', '_').lower())\n",
+    "\n",
+    "# Tirando o '$ ' da coluna product_price e mudando para tipo float\n",
+    "df['product_price'] = df['product_price'].apply(lambda x: x.replace('$ ','')).astype(float)\n",
+    "\n",
+    "# style id para int\n",
+    "df['style_id'] = df['style_id'].astype( int )\n",
+    "\n",
+    "# color id para int\n",
+    "df['color_id'] = df['color_id'].astype( int )\n",
+    "\n",
+    "# Colocando no padrão a coluna 'color_name'\n",
+    "df['color_name'] = df['color_name'].apply(lambda x: x.replace(' ', '_').lower())\n",
+    "\n",
+    "# Colocando no padrão a coluna 'fit'\n",
+    "df['Fit'] = df['Fit'].apply(lambda x: x.replace(' ', '_').lower())\n",
+    "\n",
+    "# size number\n",
+    "df['size_number'] = df['Size'].apply( lambda x: re.search( '\\d{2}.\\d{1}.cm.', x ).group(0) if pd.notnull( x ) else x )\n",
+    "\n",
+    "# deixar somente os numeros retirando os 'cm'\n",
+    "df['size_number'] = df['size_number'].apply( lambda x: re.search( '\\d+', x).group(0) if pd.notnull( x ) else x )\n",
+    "\n",
+    "# Size Model \n",
+    "df['size_model'] = df['Size'].str.extract('(\\d+/\\\\d+)')\n",
+    "\n",
+    "# Removendo a coluna size\n",
+    "df = df.drop(columns=['Size'], axis=1)\n",
+    "\n",
+    "# Removendo a coluna Product Safety\n",
+    "df = df.drop(columns=['Product safety'], axis=1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7d455ad1",
+   "metadata": {
+    "ExecuteTime": {
+     "start_time": "2023-04-29T16:07:25.004Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "418fa675",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.9"
+  },
+  "toc": {
+   "base_numbering": 1,
+   "nav_menu": {},
+   "number_sections": true,
+   "sideBar": true,
+   "skip_h1_title": false,
+   "title_cell": "Table of Contents",
+   "title_sidebar": "Contents",
+   "toc_cell": false,
+   "toc_position": {},
+   "toc_section_display": true,
+   "toc_window_display": false
+  },
+  "varInspector": {
+   "cols": {
+    "lenName": 16,
+    "lenType": 16,
+    "lenVar": 40
+   },
+   "kernels_config": {
+    "python": {
+     "delete_cmd_postfix": "",
+     "delete_cmd_prefix": "del ",
+     "library": "var_list.py",
+     "varRefreshCmd": "print(var_dic_list())"
+    },
+    "r": {
+     "delete_cmd_postfix": ") ",
+     "delete_cmd_prefix": "rm(",
+     "library": "var_list.r",
+     "varRefreshCmd": "cat(var_dic_list()) "
+    }
+   },
+   "types_to_exclude": [
+    "module",
+    "function",
+    "builtin_function_or_method",
+    "instance",
+    "_Feature"
+   ],
+   "window_display": false
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
